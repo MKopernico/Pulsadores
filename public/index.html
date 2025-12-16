@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Concurso TV</title>
+
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#1a1a1a">
+
+    <style>
+        :root { --bg: #1a1a1a; --text: #eee; --accent: #00d4ff; --danger: #ff4757; --success: #2ecc71; --gold: #ffd700; --header-bg: #252525; }
+
+        /* ESTRUCTURA GENERAL */
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; height: 100vh; overflow: hidden; }
+
+        /* PANTALLAS */
+        .screen { display: none; width: 100%; height: 100%; flex-direction: column; align-items: center; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+        .screen.active { display: flex; }
+
+        /* EXCEPCIÓN: La pantalla de juego NO debe tener scroll */
+        #view-player { overflow: hidden; }
+
+        /* CONTENEDOR CENTRADO */
+        .container-center { width: 100%; max-width: 600px; padding: 20px; text-align: center; box-sizing: border-box; margin: 0 auto; }
+
+        /* ESTILOS COMUNES */
+        input, select, button { padding: 12px; margin: 8px 0; border-radius: 8px; border: none; font-size: 16px; width: 100%; box-sizing: border-box; }
+        button { cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .btn-primary { background: var(--accent); color: #000; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-success { background: var(--success); color: white; }
+        .btn-outline { background: transparent; border: 1px solid #555; color: #aaa; }
+        .btn-big { padding: 20px; font-size: 18px; margin-top: 15px; }
+
+        h1 { color: var(--accent); margin-bottom: 30px; text-transform: uppercase; letter-spacing: 2px; }
+
+        /* --- ADMIN --- */
+        .admin-panel { text-align: left; } 
+        .team-row { background: #333; padding: 10px; margin-bottom: 10px; border-radius: 8px; display: flex; flex-direction: column; gap: 5px; border-left: 4px solid #555; }
+        .team-row.is-locked { border-left-color: var(--danger); background: #2a1a1a; }
+        .team-header { display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
+        .team-controls { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 5px; padding-top: 5px; border-top: 1px solid #444; }
+        .mini-btn { padding: 5px 10px; font-size: 12px; width: auto; flex: 1; }
+        .chip-bono { display: inline-flex; align-items: center; gap: 5px; background: #444; padding: 2px 8px; border-radius: 12px; font-size: 12px; margin-right: 2px; border: 1px solid #666; cursor: pointer; }
+        .url-row { display: flex; gap: 5px; margin-bottom: 5px; }
+        .url-input { flex: 2; background: #222; color: #fff; border: 1px solid #444; }
+        .scene-config { background: #222; padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #444; }
+
+        /* --- SELECCIÓN EQUIPO --- */
+        .team-select-btn { background: #333; color: white; border: 1px solid #555; text-align: left; padding: 15px; }
+        .team-select-btn:hover { background: #444; border-color: var(--accent); }
+        .team-select-btn.occupied { opacity: 0.5; pointer-events: none; background: #222; }
+
+        /* --- JUGADOR (DISEÑO IPAD) --- */
+
+        #player-top-bar {
+            width: 100%;
+            background: var(--header-bg);
+            border-bottom: 2px solid var(--accent);
+            padding: 20px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            z-index: 50;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        #mi-equipo-nombre { 
+            margin: 0 0 15px 0; 
+            color: var(--accent); 
+            font-size: 40px; 
+            text-transform: uppercase; 
+            letter-spacing: 1px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        #player-bonos {
+            display: flex;
+            gap: 15px; 
+            width: 100%;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .bono-btn-header {
+            background: linear-gradient(145deg, #444, #333);
+            color: white;
+            border: 1px solid #666;
+            padding: 15px 30px; 
+            font-size: 20px;    
+            border-radius: 50px;
+            width: auto;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .bono-btn-header:active { transform: scale(0.95); background: #555; }
+
+        #player-main-stage {
+            flex-grow: 1; 
+            width: 100%;
+            position: relative;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        #pulsador-btn { 
+            width: 300px; height: 300px; border-radius: 50%; 
+            font-size: 32px; border: 12px solid #333; 
+            background: #444; color: #aaa; 
+            display: flex; justify-content: center; align-items: center; 
+            transition: all 0.1s; 
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            margin: auto;
+            font-weight: bold;
+        }
+
+        #pulsador-btn.active { background: var(--success); color: white; border-color: #27ae60; cursor: pointer; box-shadow: 0 0 50px var(--success); animation: pulse 2s infinite; font-size: 40px; }
+        #pulsador-btn.pressed { background: #555; border-color: #888; color: #fff; animation: none; transform: scale(0.95); }
+        #pulsador-btn.winner { background: var(--gold); color: #000; border-color: #e6c200; box-shadow: 0 0 80px var(--gold); animation: pulse 0.5s infinite; font-size: 50px; font-weight: 900; }
+
+        #frame-player { width: 100%; height: 100%; border: none; }
+        #img-espera { width: 100%; height: 100%; object-fit: cover; display: none; }
+
+        .blocked-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(120, 0, 0, 0.95); z-index: 100; display: none; flex-direction: column; justify-content: center; align-items: center; font-size: 30px; font-weight: bold; text-transform: uppercase; backdrop-filter: blur(5px); color: white; text-shadow: 0 2px 10px black; }
+
+        .modal-action { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 200; display: none; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
+        .modal-content { background: #222; padding: 30px; border-radius: 20px; border: 1px solid #555; width: 90%; max-width: 400px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        .modal-content select { font-size: 20px; padding: 15px; margin-bottom: 20px; }
+
+        #modal-alerta { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #111; padding: 15px 30px; border-radius: 50px; border: 2px solid #444; box-shadow: 0 10px 40px rgba(0,0,0,0.8); z-index: 1000; display: none; align-items: center; gap: 15px; font-size: 18px; color: white; width: auto; min-width: 300px; justify-content: center; font-weight: bold; }
+
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+        @keyframes slideDown { from { top: -100px; } to { top: 20px; } }
+    </style>
+</head>
+<body>
+
+    <div id="modal-alerta"><span id="modal-icon">🔔</span><span id="modal-texto">Mensaje</span></div>
+
+    <div id="modal-freeze" class="modal-action">
+        <div class="modal-content">
+            <h2 style="margin-top:0; color:var(--accent)">❄️ CONGELAR</h2>
+            <p style="font-size:16px; color:#aaa; margin-bottom:10px">Elige un equipo rival:</p>
+            <select id="select-rival-freeze"></select>
+            <div style="display:flex; gap:10px; margin-top:10px;">
+                <button onclick="confirmarFreeze()" class="btn-danger" style="font-size:18px; padding:15px">CONGELAR</button>
+                <button onclick="cerrarModalFreeze()" class="btn-outline" style="font-size:18px; padding:15px">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-home" class="screen active">
+        <div class="container-center">
+            <h1>Concurso TV</h1>
+            <p>Selecciona tu rol:</p>
+            <button onclick="showView('view-admin-login')" class="btn-outline btn-big">👑 SOY ADMIN</button>
+            <button onclick="irAJugador()" class="btn-primary btn-big">🎮 SOY JUGADOR</button>
+        </div>
+    </div>
+
+    <div id="view-admin-login" class="screen">
+        <div class="container-center">
+            <h2>Acceso Admin</h2>
+            <input type="password" id="admin-pin" placeholder="Introduce el PIN" style="text-align:center">
+            <button onclick="loginAdmin()" class="btn-primary">Entrar</button>
+            <button onclick="showView('view-home')" class="btn-outline">Volver</button>
+        </div>
+    </div>
+
+    <div id="view-admin-setup" class="screen">
+        <div class="container-center">
+            <h2>Configurar Partida</h2>
+            <label>Número de Equipos:</label>
+            <input type="number" id="num-equipos" value="4" min="1" max="20" style="text-align:center; font-size:24px">
+            <button onclick="crearJuego()" class="btn-success btn-big">✨ CREAR JUEGO</button>
+        </div>
+    </div>
+
+    <div id="view-admin-panel" class="screen admin-panel">
+        <div class="container-center">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
+                <h3 style="margin:0">Panel de Control</h3>
+                <button onclick="resetTotal()" class="btn-danger" style="width:auto; font-size:12px">⚠️ Reset</button>
+            </div>
+
+            <div style="background:#222; padding:10px; border-radius:10px; margin-bottom:15px;">
+                <div style="display:flex; gap:5px;">
+                    <button onclick="ctrlPulsador('abrir')" class="btn-success">ABRIR</button>
+                    <button onclick="ctrlPulsador('pausar')" class="btn-outline">PAUSAR</button>
+                    <button onclick="ctrlPulsador('reset')" class="btn-danger">RESET</button>
+                </div>
+                <button id="btn-global-lock" onclick="toggleGlobalLock()" class="btn-outline" style="margin-top:5px">🔓 Bloqueo Global: OFF</button>
+                <div id="admin-cola" style="margin-top:10px; color:var(--accent); font-weight:bold; min-height:20px; font-size:18px;"></div>
+            </div>
+
+            <h4 style="margin:15px 0 5px 0">📺 Escenas</h4>
+            <div class="scene-config">
+                <label>Fondo Espera (URL o ./fondo.jpg):</label>
+                <input type="text" id="cfg-espera" placeholder="Ej: ./logo.jpg">
+                <button class="mini-btn btn-outline" onclick="guardarConfigEscenas()">💾 Guardar</button>
+            </div>
+
+            <div style="display:flex; gap:5px; margin-bottom:10px">
+                <button onclick="setEscena('pulsador')" class="btn-primary">🔴 PULSADOR</button>
+                <button onclick="setEscena('espera')" class="btn-outline">🖼️ ESPERA</button>
+            </div>
+
+            <h4 style="margin:5px 0">Lanzar Web/Video</h4>
+            <div id="url-slots"></div>
+
+            <h4 style="margin:15px 0 5px 0">Gestión Equipos</h4>
+            <div id="admin-equipos-list"></div>
+        </div>
+    </div>
+
+    <div id="view-player-select" class="screen">
+        <div class="container-center">
+            <h2>Elige tu Equipo</h2>
+            <p id="msg-espera-equipos">Esperando al administrador...</p>
+            <div id="lista-equipos-join"></div>
+            <button onclick="showView('view-home')" class="btn-outline" style="margin-top:20px">Volver</button>
+        </div>
+    </div>
+
+    <div id="view-player" class="screen">
+        <div id="player-top-bar">
+            <h2 id="mi-equipo-nombre">Equipo</h2>
+            <div id="player-bonos"></div>
+        </div>
+
+        <div id="player-main-stage">
+            <div id="pulsador-btn" onclick="pulsar()" style="display:none">ESPERA...</div>
+            <iframe id="frame-player" src="" style="display:none"></iframe>
+            <img id="img-espera" src="" alt="Espera">
+        </div>
+
+        <div id="blocked-layer" class="blocked-overlay">
+            <span style="font-size:50px">❄️</span>
+            <span>TE HAN CONGELADO</span>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        let misDatos = null;
+        let estadoActual = {};
+        let equiposCache = [];
+
+        function showView(id) {
+            document.querySelectorAll('.screen').forEach(e => e.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        }
+
+        function mostrarNotif(msg, icon="🔔") {
+            const m = document.getElementById('modal-alerta');
+            document.getElementById('modal-texto').innerText = msg;
+            document.getElementById('modal-icon').innerText = icon;
+            m.style.display = 'flex';
+            m.style.animation = 'slideDown 0.5s';
+            setTimeout(() => { m.style.display = 'none'; }, 3000);
+        }
+
+        // --- ADMIN ---
+        function loginAdmin() { socket.emit('login_admin', document.getElementById('admin-pin').value); }
+        function crearJuego() { socket.emit('admin_crear_juego', document.getElementById('num-equipos').value); }
+        function ctrlPulsador(a) { socket.emit('admin_control_pulsador', a); }
+        function toggleGlobalLock() { socket.emit('admin_toggle_global_lock', !estadoActual.bloqueoGlobal); }
+        function resetTotal() { if(confirm("¿Borrar todo?")) socket.emit('admin_reset_total'); }
+
+        function procesarUrl(u) {
+            if(!u) return "";
+            if (u.includes('youtube.com/watch?v=')) return u.replace('watch?v=', 'embed/');
+            else if (u.includes('youtu.be/')) return u.replace('youtu.be/', 'youtube.com/embed/');
+            return u;
+        }
+
+        function saveUrl(i) {
+            let u = document.getElementById(`url-slot-${i}`).value;
+            u = procesarUrl(u);
+            socket.emit('admin_set_escena', { vista:'web', url:null, saveSlot:i, urlToSave:u });
+            mostrarNotif("URL Guardada", "💾");
+        }
+        function launchUrl(i) {
+            let u = document.getElementById(`url-slot-${i}`).value;
+            u = procesarUrl(u);
+            if(u) socket.emit('admin_set_escena', { vista:'web', url:u });
+        }
+        function setEscena(v) { socket.emit('admin_set_escena', { vista:v }); }
+        function guardarConfigEscenas() {
+            const esp = document.getElementById('cfg-espera').value;
+            socket.emit('admin_config_escenas', { espera: esp });
+            mostrarNotif("Fondo Guardado", "✅");
+        }
+
+        function toggleBlock(id, val) { socket.emit('admin_toggle_bloqueo', { equipoId:id, bloqueado:val }); }
+        function addBono(id, tipo) { socket.emit('admin_gestionar_bono', { equipoId:id, accion:'add', tipo:tipo }); }
+        function renombrarEquipo(id, nombreActual) {
+            const nuevo = prompt("Renombrar " + nombreActual + ":", nombreActual);
+            if(nuevo && nuevo.trim() !== "") socket.emit('admin_rename_team', { id: id, nuevoNombre: nuevo.trim() });
+        }
+
+        // --- JUGADOR ---
+        function irAJugador() {
+            // Intentar Pantalla Completa
+            const doc = document.documentElement;
+            if (doc.requestFullscreen) doc.requestFullscreen().catch(e => {});
+            else if (doc.webkitRequestFullscreen) doc.webkitRequestFullscreen();
+
+            showView('view-player-select');
+            renderListaSeleccion(equiposCache);
+        }
+        function unirseEquipo(id) { 
+            localStorage.setItem('miEquipoId', id);
+            socket.emit('join_team', { id: id }); 
+        }
+        function pulsar() { socket.emit('pulsar_boton'); }
+
+        // --- MODAL FREEZE ---
+        function abrirModalFreeze() {
+            const select = document.getElementById('select-rival-freeze');
+            select.innerHTML = '';
+            const rivales = equiposCache.filter(e => e.id !== misDatos.id);
+            if(rivales.length === 0) { mostrarNotif("No hay rivales"); return; }
+            rivales.forEach(r => {
+                const opt = document.createElement('option');
+                opt.value = r.id; opt.innerText = r.nombre;
+                select.appendChild(opt);
+            });
+            document.getElementById('modal-freeze').style.display = 'flex';
+        }
+        function cerrarModalFreeze() { document.getElementById('modal-freeze').style.display = 'none'; }
+        function confirmarFreeze() {
+            const targetId = document.getElementById('select-rival-freeze').value;
+            if(targetId) { socket.emit('usar_bono', { tipo: 'freeze', targetId: targetId }); cerrarModalFreeze(); }
+        }
+
+        // --- SOCKETS ---
+        socket.on('init_connection', (d) => {
+            equiposCache = d.equipos;
+            estadoActual = d.estadoJuego;
+            const savedId = localStorage.getItem('miEquipoId');
+            if (savedId && d.juegoIniciado) unirseEquipo(savedId);
+            if(document.getElementById('view-player-select').classList.contains('active')) renderListaSeleccion(d.equipos);
+        });
+
+        socket.on('admin_auth_success', (d) => {
+            equiposCache = d.equipos;
+            renderUrlSlots(d.estadoJuego.urlsGuardadas);
+            if(d.estadoJuego.escenas) document.getElementById('cfg-espera').value = d.estadoJuego.escenas.espera || '';
+            if(d.juegoIniciado) { renderAdminPanel(d.equipos); showView('view-admin-panel'); } 
+            else showView('view-admin-setup');
+        });
+
+        socket.on('juego_iniciado_teams', (equipos) => {
+            equiposCache = equipos;
+            if(document.getElementById('view-admin-setup').classList.contains('active')) { renderAdminPanel(equipos); showView('view-admin-panel'); }
+            renderListaSeleccion(equipos);
+        });
+
+        socket.on('sync_estado', (est) => { estadoActual = est; updateUI(); });
+        socket.on('estado_pulsador_cambio', (d) => { estadoActual.pulsadorActivo = d.activo; estadoActual.colaPulsador = d.cola; updateUI(); });
+        socket.on('actualizar_pulsador_lista', (cola) => { estadoActual.colaPulsador = cola; updateUI(); });
+
+        socket.on('actualizar_admin_equipos', (eqs) => {
+            equiposCache = eqs;
+            if(document.getElementById('view-admin-panel').classList.contains('active')) renderAdminPanel(eqs);
+            if(document.getElementById('view-player-select').classList.contains('active')) renderListaSeleccion(eqs);
+        });
+
+        socket.on('login_success', (d) => {
+            misDatos = d.miEquipo;
+            equiposCache = d.equiposRivales;
+            updateUI();
+            showView('view-player');
+        });
+        socket.on('update_mi_equipo', (eq) => { misDatos = eq; updateUI(); });
+        socket.on('notificacion_bono', (d) => mostrarNotif(d.msg));
+        socket.on('cambio_de_escena', (state) => { estadoActual = state; updateUI(); });
+        socket.on('reset_total_client', () => { localStorage.removeItem('miEquipoId'); location.reload(); });
+
+        // --- RENDERIZADO ---
+        function renderListaSeleccion(equipos) {
+            const c = document.getElementById('lista-equipos-join');
+            c.innerHTML = '';
+            if(!equipos || equipos.length === 0) { document.getElementById('msg-espera-equipos').style.display = 'block'; return; }
+            document.getElementById('msg-espera-equipos').style.display = 'none';
+            equipos.forEach(eq => {
+                const btn = document.createElement('button');
+                const savedId = localStorage.getItem('miEquipoId');
+                const isMine = savedId === eq.id;
+                const bloqueado = eq.ocupado && !isMine;
+                btn.className = `team-select-btn ${bloqueado ? 'occupied' : ''}`;
+                btn.innerText = eq.nombre + (bloqueado ? " (Ocupado)" : "");
+                if(!bloqueado) btn.onclick = () => unirseEquipo(eq.id);
+                c.appendChild(btn);
+            });
+        }
+
+        function renderAdminPanel(equipos) {
+            const list = document.getElementById('admin-equipos-list');
+            list.innerHTML = '';
+            equipos.forEach(eq => {
+                const div = document.createElement('div');
+                div.className = `team-row ${eq.bloqueado ? 'is-locked' : ''}`;
+                let bonosHtml = '';
+                eq.bonos.forEach((b) => {
+                    const icon = b === 'freeze' ? '❄️' : '⛔';
+                    bonosHtml += `<span class="chip-bono" onclick="socket.emit('admin_gestionar_bono', { equipoId: '${eq.id}', accion: 'remove', tipo: '${b}' })">${icon} ✕</span>`;
+                });
+                div.innerHTML = `
+                    <div class="team-header">
+                        <div style="display:flex; align-items:center; gap:10px">
+                            <span style="font-size:18px">${eq.nombre}</span>
+                            <button class="mini-btn btn-outline" style="width:auto; padding:2px 8px;" onclick="renombrarEquipo('${eq.id}', '${eq.nombre}')">✏️</button>
+                        </div>
+                        <div style="font-size:12px; font-weight:normal; margin-left:auto">${eq.ocupado?'🟢 Online':'🔴 Offline'}</div>
+                    </div>
+                    <div style="margin-top:5px; margin-bottom:5px;">${bonosHtml}</div>
+                    <div class="team-controls">
+                        <button class="mini-btn btn-outline" onclick="toggleBlock('${eq.id}', ${!eq.bloqueado})">${eq.bloqueado ? '🔓 Desbloq' : '🔒 Bloquear'}</button>
+                        <button class="mini-btn btn-outline" onclick="addBono('${eq.id}', 'freeze')">+ ❄️ Freeze</button>
+                        <button class="mini-btn btn-outline" onclick="addBono('${eq.id}', 'lock_all')">+ ⛔ LockAll</button>
+                    </div>`;
+                list.appendChild(div);
+            });
+        }
+
+        function renderUrlSlots(urls) {
+            const c = document.getElementById('url-slots');
+            c.innerHTML = '';
+            for(let i=0; i<3; i++) {
+                c.innerHTML += `<div class="url-row"><input type="text" class="url-input" id="url-slot-${i}" value="${urls[i] || ''}" placeholder="URL ${i+1}"><button class="mini-btn btn-success" onclick="launchUrl(${i})">Lanzar</button><button class="mini-btn btn-outline" onclick="saveUrl(${i})">💾</button></div>`;
+            }
+        }
+
+        function updateUI() {
+            // Admin Cola
+            const colaDiv = document.getElementById('admin-cola');
+            if(estadoActual.colaPulsador.length > 0) {
+                colaDiv.innerHTML = estadoActual.colaPulsador.map((p, i) => {
+                    const color = i === 0 ? "var(--gold)" : "var(--success)";
+                    const icon = i === 0 ? "🏆" : "";
+                    return `<div style="color:${color}; padding:2px;">${icon} ${i+1}. ${p.nombre} <small style="opacity:0.6">(${(p.tiempo%10000)})</small></div>`;
+                }).join('');
+            } else {
+                colaDiv.innerHTML = estadoActual.pulsadorActivo ? `<span style="color:var(--success)">🟢 ABIERTO</span>` : `<span style="color:gray">🔴 CERRADO</span>`;
+            }
+
+            // JUGADOR
+            if(misDatos) {
+                document.getElementById('mi-equipo-nombre').innerText = misDatos.nombre;
+
+                const pulsador = document.getElementById('pulsador-btn');
+                const iframe = document.getElementById('frame-player');
+                const imgEspera = document.getElementById('img-espera');
+                const bonosDiv = document.getElementById('player-bonos');
+                const overlay = document.getElementById('blocked-layer');
+
+                // VISTAS
+                if (estadoActual.vistaActual === 'espera') {
+                    bonosDiv.style.display = 'none';
+                    imgEspera.style.display = 'block';
+                    pulsador.style.display = 'none';
+                    iframe.style.display = 'none';
+                    if(estadoActual.escenas.espera) imgEspera.src = estadoActual.escenas.espera;
+                } 
+                else {
+                    bonosDiv.style.display = 'flex';
+                    imgEspera.style.display = 'none';
+
+                    if (estadoActual.vistaActual === 'pulsador') {
+                        pulsador.style.display = 'flex';
+                        iframe.style.display = 'none';
+                    } else if (estadoActual.vistaActual === 'web') {
+                        pulsador.style.display = 'none';
+                        iframe.style.display = 'block';
+                        let url = estadoActual.urlActual;
+                        if(iframe.getAttribute('data-last') !== url) {
+                            iframe.src = url;
+                            iframe.setAttribute('data-last', url);
+                        }
+                    }
+                }
+
+                // BLOQUEOS
+                if(misDatos.bloqueado || estadoActual.bloqueoGlobal) {
+                    overlay.style.display = 'flex';
+                    if(estadoActual.bloqueoGlobal) overlay.querySelector('span:last-child').innerText = "BLOQUEO GLOBAL";
+                    else overlay.querySelector('span:last-child').innerText = "TE HAN CONGELADO";
+                } else { overlay.style.display = 'none'; }
+
+                // BOTÓN
+                const soyIndex = estadoActual.colaPulsador.findIndex(p => p.id === misDatos.id);
+                if (soyIndex !== -1) {
+                    if (soyIndex === 0) { pulsador.className = "winner"; pulsador.innerText = "¡1º LUGAR!"; pulsador.onclick = null; } 
+                    else { pulsador.className = "pressed"; pulsador.innerText = `${soyIndex + 1}º PUESTO`; pulsador.onclick = null; }
+                } else if(estadoActual.pulsadorActivo) {
+                    pulsador.className = "active"; pulsador.innerText = "¡PULSAR!"; pulsador.onclick = pulsar;
+                } else {
+                    pulsador.className = ""; pulsador.innerText = "ESPERA..."; pulsador.onclick = null;
+                }
+
+                // BONOS
+                bonosDiv.innerHTML = '';
+                misDatos.bonos.forEach(b => {
+                    const bBtn = document.createElement('button');
+                    bBtn.className = 'bono-btn-header';
+                    if(b === 'freeze') { 
+                        bBtn.innerHTML = "❄️ Freeze"; 
+                        bBtn.onclick = () => abrirModalFreeze(); 
+                    } 
+                    else if (b === 'lock_all') { 
+                        bBtn.innerHTML = "⛔ LockAll"; 
+                        bBtn.onclick = () => { if(confirm("¿Bloquear TODOS?")) socket.emit('usar_bono', { tipo: 'lock_all' }); }; 
+                    }
+                    bonosDiv.appendChild(bBtn);
+                });
+            }
+        }
+    </script>
+</body>
+</html>
