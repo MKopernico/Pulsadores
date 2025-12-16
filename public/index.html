@@ -20,11 +20,10 @@
         .screen { display: none; width: 100%; height: 100%; flex-direction: column; align-items: center; overflow-y: auto; -webkit-overflow-scrolling: touch; }
         .screen.active { display: flex; }
 
-        /* EXCEPCIÓN: La pantalla de juego NO debe tener scroll */
         #view-player { overflow: hidden; }
 
         /* CONTENEDOR CENTRADO */
-        .container-center { width: 100%; max-width: 600px; padding: 20px; text-align: center; box-sizing: border-box; margin: 0 auto; }
+        .container-center { width: 100%; max-width: 1200px; padding: 20px; text-align: center; box-sizing: border-box; margin: 0 auto; }
 
         /* ESTILOS COMUNES */
         input, select, button { padding: 12px; margin: 8px 0; border-radius: 8px; border: none; font-size: 16px; width: 100%; box-sizing: border-box; }
@@ -32,115 +31,132 @@
         .btn-primary { background: var(--accent); color: #000; }
         .btn-danger { background: var(--danger); color: white; }
         .btn-success { background: var(--success); color: white; }
+
+        /* Botones inactivos (gris oscuro) */
         .btn-outline { background: transparent; border: 1px solid #555; color: #aaa; }
+        /* Botones activos (verde brillante para URLs) */
+        .btn-active-url { background: var(--success); color: #fff; box-shadow: 0 0 10px rgba(46, 204, 113, 0.4); border: 1px solid white; transform: scale(1.02); }
+
         .btn-big { padding: 20px; font-size: 18px; margin-top: 15px; }
 
         h1 { color: var(--accent); margin-bottom: 30px; text-transform: uppercase; letter-spacing: 2px; }
 
-        /* --- ADMIN --- */
+        /* --- LAYOUT GRID --- */
+        .admin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; text-align: left; }
+        @media (max-width: 768px) { .admin-grid { grid-template-columns: 1fr; } .container-center { max-width: 600px; } }
+
+        /* --- BARRA SUPERIOR FIJA (REDISEÑADA) --- */
+        .barra-superior {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background-color: #222;
+            padding: 10px;
+            margin: -20px -20px 20px -20px;
+            display: flex;
+            justify-content: space-between; /* Separar bloque izquierdo del derecho */
+            gap: 15px;
+            border-bottom: 3px solid #444;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        }
+
+        .grupo-botones-main {
+            display: flex;
+            flex: 1; /* Ocupa todo el espacio posible */
+            gap: 10px;
+        }
+
+        .btn-head {
+            flex: 1; /* Los 3 botones crecen igual */
+            padding: 15px 5px;
+            font-size: 14px;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: #fff;
+            border-radius: 8px;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .btn-head-inactivo { background-color: #333; color: #888; opacity: 0.8; }
+
+        .btn-head-activo { 
+            background-color: var(--accent); 
+            color: #000; 
+            transform: scale(1.05); 
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.4); 
+            border: 2px solid white;
+            opacity: 1;
+            z-index: 10;
+        }
+
+        /* Botón URL Activo en Header (Verde) */
+        .btn-head-url-activo {
+            background-color: var(--success);
+            color: #fff;
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(46, 204, 113, 0.4);
+            border: 2px solid white;
+            opacity: 1;
+            z-index: 10;
+        }
+
+        /* Botón Reset Cuadrado a la derecha */
+        .btn-head-reset { 
+            background-color: var(--danger); 
+            width: 60px; /* Casi cuadrado */
+            flex: 0 0 60px; /* No crece ni encoge */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            border: 2px solid #a71d2a;
+            border-radius: 8px;
+            margin: 0;
+        }
+        .btn-head-reset:active { transform: scale(0.9); }
+
+        /* --- ADMIN COMPONENTES --- */
         .admin-panel { text-align: left; } 
+        .panel-box { background: #222; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #333; }
+        .panel-title { margin-top: 0; color: #ddd; border-bottom: 1px solid #444; padding-bottom: 10px; margin-bottom: 15px; font-size: 18px; }
+
         .team-row { background: #333; padding: 10px; margin-bottom: 10px; border-radius: 8px; display: flex; flex-direction: column; gap: 5px; border-left: 4px solid #555; }
         .team-row.is-locked { border-left-color: var(--danger); background: #2a1a1a; }
         .team-header { display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
         .team-controls { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 5px; padding-top: 5px; border-top: 1px solid #444; }
         .mini-btn { padding: 5px 10px; font-size: 12px; width: auto; flex: 1; }
         .chip-bono { display: inline-flex; align-items: center; gap: 5px; background: #444; padding: 2px 8px; border-radius: 12px; font-size: 12px; margin-right: 2px; border: 1px solid #666; cursor: pointer; }
+
         .url-row { display: flex; gap: 5px; margin-bottom: 5px; }
-        .url-input { flex: 2; background: #222; color: #fff; border: 1px solid #444; }
-        .scene-config { background: #222; padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #444; }
+        .url-input { flex: 2; background: #111; color: #fff; border: 1px solid #444; }
 
         /* --- SELECCIÓN EQUIPO --- */
         .team-select-btn { background: #333; color: white; border: 1px solid #555; text-align: left; padding: 15px; }
         .team-select-btn:hover { background: #444; border-color: var(--accent); }
         .team-select-btn.occupied { opacity: 0.5; pointer-events: none; background: #222; }
 
-        /* --- JUGADOR (DISEÑO IPAD) --- */
-
-        #player-top-bar {
-            width: 100%;
-            background: var(--header-bg);
-            border-bottom: 2px solid var(--accent);
-            padding: 20px;
-            box-sizing: border-box;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            z-index: 50;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
-        }
-
-        #mi-equipo-nombre { 
-            margin: 0 0 15px 0; 
-            color: var(--accent); 
-            font-size: 40px; 
-            text-transform: uppercase; 
-            letter-spacing: 1px;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-        }
-
-        #player-bonos {
-            display: flex;
-            gap: 15px; 
-            width: 100%;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-
-        .bono-btn-header {
-            background: linear-gradient(145deg, #444, #333);
-            color: white;
-            border: 1px solid #666;
-            padding: 15px 30px; 
-            font-size: 20px;    
-            border-radius: 50px;
-            width: auto;
-            margin: 0;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-        }
+        /* --- JUGADOR --- */
+        #player-top-bar { width: 100%; background: var(--header-bg); border-bottom: 2px solid var(--accent); padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; z-index: 50; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        #mi-equipo-nombre { margin: 0 0 15px 0; color: var(--accent); font-size: 40px; text-transform: uppercase; letter-spacing: 1px; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+        #player-bonos { display: flex; gap: 15px; width: 100%; justify-content: center; flex-wrap: wrap; }
+        .bono-btn-header { background: linear-gradient(145deg, #444, #333); color: white; border: 1px solid #666; padding: 15px 30px; font-size: 20px; border-radius: 50px; width: auto; margin: 0; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
         .bono-btn-header:active { transform: scale(0.95); background: #555; }
-
-        #player-main-stage {
-            flex-grow: 1; 
-            width: 100%;
-            position: relative;
-            background: #000;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            overflow: hidden;
-        }
-
-        #pulsador-btn { 
-            width: 300px; height: 300px; border-radius: 50%; 
-            font-size: 32px; border: 12px solid #333; 
-            background: #444; color: #aaa; 
-            display: flex; justify-content: center; align-items: center; 
-            transition: all 0.1s; 
-            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-            margin: auto;
-            font-weight: bold;
-        }
-
+        #player-main-stage { flex-grow: 1; width: 100%; position: relative; background: #000; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+        #pulsador-btn { width: 300px; height: 300px; border-radius: 50%; font-size: 32px; border: 12px solid #333; background: #444; color: #aaa; display: flex; justify-content: center; align-items: center; transition: all 0.1s; box-shadow: 0 10px 40px rgba(0,0,0,0.5); margin: auto; font-weight: bold; }
         #pulsador-btn.active { background: var(--success); color: white; border-color: #27ae60; cursor: pointer; box-shadow: 0 0 50px var(--success); animation: pulse 2s infinite; font-size: 40px; }
         #pulsador-btn.pressed { background: #555; border-color: #888; color: #fff; animation: none; transform: scale(0.95); }
         #pulsador-btn.winner { background: var(--gold); color: #000; border-color: #e6c200; box-shadow: 0 0 80px var(--gold); animation: pulse 0.5s infinite; font-size: 50px; font-weight: 900; }
-
         #frame-player { width: 100%; height: 100%; border: none; }
         #img-espera { width: 100%; height: 100%; object-fit: cover; display: none; }
-
         .blocked-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(120, 0, 0, 0.95); z-index: 100; display: none; flex-direction: column; justify-content: center; align-items: center; font-size: 30px; font-weight: bold; text-transform: uppercase; backdrop-filter: blur(5px); color: white; text-shadow: 0 2px 10px black; }
-
         .modal-action { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 200; display: none; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
         .modal-content { background: #222; padding: 30px; border-radius: 20px; border: 1px solid #555; width: 90%; max-width: 400px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
         .modal-content select { font-size: 20px; padding: 15px; margin-bottom: 20px; }
-
         #modal-alerta { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #111; padding: 15px 30px; border-radius: 50px; border: 2px solid #444; box-shadow: 0 10px 40px rgba(0,0,0,0.8); z-index: 1000; display: none; align-items: center; gap: 15px; font-size: 18px; color: white; width: auto; min-width: 300px; justify-content: center; font-weight: bold; }
-
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
         @keyframes slideDown { from { top: -100px; } to { top: 20px; } }
     </style>
@@ -190,38 +206,67 @@
 
     <div id="view-admin-panel" class="screen admin-panel">
         <div class="container-center">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
-                <h3 style="margin:0">Panel de Control</h3>
-                <button onclick="resetTotal()" class="btn-danger" style="width:auto; font-size:12px">⚠️ Reset</button>
-            </div>
 
-            <div style="background:#222; padding:10px; border-radius:10px; margin-bottom:15px;">
-                <div style="display:flex; gap:5px;">
-                    <button onclick="ctrlPulsador('abrir')" class="btn-success">ABRIR</button>
-                    <button onclick="ctrlPulsador('pausar')" class="btn-outline">PAUSAR</button>
-                    <button onclick="ctrlPulsador('reset')" class="btn-danger">RESET</button>
+            <div class="barra-superior">
+
+                <div class="grupo-botones-main">
+                    <button id="head-btn-pulsador" onclick="setEscena('pulsador')" class="btn-head btn-head-inactivo">
+                        🔴 JUEGO
+                    </button>
+                    <button id="head-btn-espera" onclick="setEscena('espera')" class="btn-head btn-head-inactivo">
+                        🖼️ ESPERA
+                    </button>
+                    <button id="head-btn-url1" onclick="launchUrl(0)" class="btn-head btn-head-inactivo">
+                        📺 URL 1
+                    </button>
                 </div>
-                <button id="btn-global-lock" onclick="toggleGlobalLock()" class="btn-outline" style="margin-top:5px">🔓 Bloqueo Global: OFF</button>
-                <div id="admin-cola" style="margin-top:10px; color:var(--accent); font-weight:bold; min-height:20px; font-size:18px;"></div>
+
+                <button onclick="resetTotal()" class="btn-head-reset" title="Borrar Todo">
+                    🗑️
+                </button>
             </div>
 
-            <h4 style="margin:15px 0 5px 0">📺 Escenas</h4>
-            <div class="scene-config">
-                <label>Fondo Espera (URL o ./fondo.jpg):</label>
-                <input type="text" id="cfg-espera" placeholder="Ej: ./logo.jpg">
-                <button class="mini-btn btn-outline" onclick="guardarConfigEscenas()">💾 Guardar</button>
+            <div class="admin-grid">
+
+                <div class="col-left">
+
+                    <div class="panel-box">
+                        <h4 class="panel-title">⚡ Pulsador Rápido</h4>
+                        <div style="display:flex; gap:5px;">
+                            <button onclick="ctrlPulsador('abrir')" class="btn-success">ABRIR</button>
+                            <button onclick="ctrlPulsador('pausar')" class="btn-outline">PAUSAR</button>
+                            <button onclick="ctrlPulsador('reset')" class="btn-danger">RESET</button>
+                        </div>
+                        <div id="admin-cola" style="margin-top:10px; color:var(--accent); font-weight:bold; min-height:20px; font-size:18px;"></div>
+                    </div>
+
+                    <div class="panel-box">
+                        <h4 class="panel-title">📺 Escenas</h4>
+                        <div style="margin-bottom:5px;">
+                            <label style="font-size:12px; color:#aaa">Fondo Espera:</label>
+                            <div style="display:flex; gap:5px">
+                                <input type="text" id="cfg-espera" placeholder="espera.jpg" class="url-input">
+                                <button class="mini-btn btn-outline" style="flex:0" onclick="guardarConfigEscenas()">💾</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel-box">
+                        <h4 class="panel-title">🎥 Lanzar Web/Video</h4>
+                        <div id="url-slots"></div>
+                    </div>
+
+                </div>
+
+                <div class="col-right">
+                    <div class="panel-box">
+                        <h4 class="panel-title">👥 Gestión Equipos</h4>
+                        <button id="btn-global-lock" onclick="toggleGlobalLock()" class="btn-outline" style="margin-bottom:15px; background:#2a2a2a; border: 1px solid #555;">🔓 Bloqueo Global: OFF</button>
+                        <div id="admin-equipos-list"></div>
+                    </div>
+                </div>
+
             </div>
-
-            <div style="display:flex; gap:5px; margin-bottom:10px">
-                <button onclick="setEscena('pulsador')" class="btn-primary">🔴 PULSADOR</button>
-                <button onclick="setEscena('espera')" class="btn-outline">🖼️ ESPERA</button>
-            </div>
-
-            <h4 style="margin:5px 0">Lanzar Web/Video</h4>
-            <div id="url-slots"></div>
-
-            <h4 style="margin:15px 0 5px 0">Gestión Equipos</h4>
-            <div id="admin-equipos-list"></div>
         </div>
     </div>
 
@@ -278,7 +323,7 @@
         function crearJuego() { socket.emit('admin_crear_juego', document.getElementById('num-equipos').value); }
         function ctrlPulsador(a) { socket.emit('admin_control_pulsador', a); }
         function toggleGlobalLock() { socket.emit('admin_toggle_global_lock', !estadoActual.bloqueoGlobal); }
-        function resetTotal() { if(confirm("¿Borrar todo?")) socket.emit('admin_reset_total'); }
+        function resetTotal() { if(confirm("¿SEGURO? Esto borrará equipos y empezará de cero.")) socket.emit('admin_reset_total'); }
 
         function procesarUrl(u) {
             if(!u) return "";
@@ -312,13 +357,54 @@
             if(nuevo && nuevo.trim() !== "") socket.emit('admin_rename_team', { id: id, nuevoNombre: nuevo.trim() });
         }
 
+        // --- GESTIÓN DE COLORES E ILUMINACIÓN (NUEVO) ---
+        function actualizarIluminacion(est) {
+            // 1. Header Buttons
+            const btnPulsador = document.getElementById('head-btn-pulsador');
+            const btnEspera = document.getElementById('head-btn-espera');
+            const btnUrl1 = document.getElementById('head-btn-url1');
+
+            if(btnPulsador) {
+                // Reset a todos
+                btnPulsador.className = 'btn-head btn-head-inactivo';
+                btnEspera.className = 'btn-head btn-head-inactivo';
+                btnUrl1.className = 'btn-head btn-head-inactivo';
+
+                if(est.vistaActual === 'pulsador') {
+                    btnPulsador.className = 'btn-head btn-head-activo';
+                } else if (est.vistaActual === 'espera') {
+                    btnEspera.className = 'btn-head btn-head-activo';
+                } else if (est.vistaActual === 'web') {
+                    // Check si es URL 1
+                    const url1 = est.urlsGuardadas[0];
+                    if(url1 && est.urlActual === url1) {
+                         btnUrl1.className = 'btn-head btn-head-url-activo'; // Verde
+                    }
+                }
+            }
+
+            // 2. Botones de la lista de URLs (Lanzar)
+            for(let i=0; i<3; i++) {
+                const btnLaunch = document.getElementById(`btn-launch-${i}`);
+                if(btnLaunch) {
+                    const savedUrl = est.urlsGuardadas[i];
+                    // Si estamos en modo web Y la url actual coincide con la guardada en este slot
+                    if (est.vistaActual === 'web' && savedUrl && est.urlActual === savedUrl) {
+                        btnLaunch.className = 'mini-btn btn-active-url'; // Clase verde brillante
+                        btnLaunch.innerText = "REPRODUCIENDO...";
+                    } else {
+                        btnLaunch.className = 'mini-btn btn-outline'; // Clase normal
+                        btnLaunch.innerText = "Lanzar";
+                    }
+                }
+            }
+        }
+
         // --- JUGADOR ---
         function irAJugador() {
-            // Intentar Pantalla Completa
             const doc = document.documentElement;
             if (doc.requestFullscreen) doc.requestFullscreen().catch(e => {});
             else if (doc.webkitRequestFullscreen) doc.webkitRequestFullscreen();
-
             showView('view-player-select');
             renderListaSeleccion(equiposCache);
         }
@@ -358,19 +444,38 @@
 
         socket.on('admin_auth_success', (d) => {
             equiposCache = d.equipos;
+            estadoActual = d.estadoJuego;
             renderUrlSlots(d.estadoJuego.urlsGuardadas);
             if(d.estadoJuego.escenas) document.getElementById('cfg-espera').value = d.estadoJuego.escenas.espera || '';
-            if(d.juegoIniciado) { renderAdminPanel(d.equipos); showView('view-admin-panel'); } 
+            if(d.juegoIniciado) { 
+                renderAdminPanel(d.equipos); 
+                actualizarIluminacion(d.estadoJuego);
+                showView('view-admin-panel'); 
+            } 
             else showView('view-admin-setup');
         });
 
         socket.on('juego_iniciado_teams', (equipos) => {
             equiposCache = equipos;
-            if(document.getElementById('view-admin-setup').classList.contains('active')) { renderAdminPanel(equipos); showView('view-admin-panel'); }
+            if(document.getElementById('view-admin-setup').classList.contains('active')) { 
+                renderAdminPanel(equipos); 
+                showView('view-admin-panel'); 
+            }
             renderListaSeleccion(equipos);
         });
 
-        socket.on('sync_estado', (est) => { estadoActual = est; updateUI(); });
+        socket.on('sync_estado', (est) => { 
+            estadoActual = est; 
+            updateUI(); 
+            actualizarIluminacion(est); 
+            // Update Toggle Button Text
+            const btnLock = document.getElementById('btn-global-lock');
+            if(btnLock) {
+                if(est.bloqueoGlobal) { btnLock.innerText = "🔒 Bloqueo Global: ON"; btnLock.className = "btn-danger"; }
+                else { btnLock.innerText = "🔓 Bloqueo Global: OFF"; btnLock.className = "btn-outline"; }
+            }
+        });
+
         socket.on('estado_pulsador_cambio', (d) => { estadoActual.pulsadorActivo = d.activo; estadoActual.colaPulsador = d.cola; updateUI(); });
         socket.on('actualizar_pulsador_lista', (cola) => { estadoActual.colaPulsador = cola; updateUI(); });
 
@@ -388,7 +493,13 @@
         });
         socket.on('update_mi_equipo', (eq) => { misDatos = eq; updateUI(); });
         socket.on('notificacion_bono', (d) => mostrarNotif(d.msg));
-        socket.on('cambio_de_escena', (state) => { estadoActual = state; updateUI(); });
+
+        socket.on('cambio_de_escena', (state) => { 
+            estadoActual = state; 
+            updateUI(); 
+            actualizarIluminacion(state);
+        });
+
         socket.on('reset_total_client', () => { localStorage.removeItem('miEquipoId'); location.reload(); });
 
         // --- RENDERIZADO ---
@@ -438,16 +549,21 @@
             });
         }
 
+        // GENERAR SLOTS DE URL CON ID PARA ILUMINARLOS LUEGO
         function renderUrlSlots(urls) {
             const c = document.getElementById('url-slots');
             c.innerHTML = '';
             for(let i=0; i<3; i++) {
-                c.innerHTML += `<div class="url-row"><input type="text" class="url-input" id="url-slot-${i}" value="${urls[i] || ''}" placeholder="URL ${i+1}"><button class="mini-btn btn-success" onclick="launchUrl(${i})">Lanzar</button><button class="mini-btn btn-outline" onclick="saveUrl(${i})">💾</button></div>`;
+                c.innerHTML += `
+                    <div class="url-row">
+                        <input type="text" class="url-input" id="url-slot-${i}" value="${urls[i] || ''}" placeholder="URL ${i+1}">
+                        <button id="btn-launch-${i}" class="mini-btn btn-outline" onclick="launchUrl(${i})">Lanzar</button>
+                        <button class="mini-btn btn-outline" style="flex:0" onclick="saveUrl(${i})">💾</button>
+                    </div>`;
             }
         }
 
         function updateUI() {
-            // Admin Cola
             const colaDiv = document.getElementById('admin-cola');
             if(estadoActual.colaPulsador.length > 0) {
                 colaDiv.innerHTML = estadoActual.colaPulsador.map((p, i) => {
