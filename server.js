@@ -19,13 +19,14 @@ let estadoJuego = {
     vistaActual: 'pulsador', // 'pulsador', 'espera', 'web'
     urlActual: '', 
     urlsGuardadas: ['', '', ''], 
-    escenas: { espera: '' },
+    // AQUÍ ESTÁ EL CAMBIO: Ya busca la foto por defecto
+    escenas: { espera: 'espera.jpg' },
     pulsadorActivo: false,
     colaPulsador: [],
     bloqueoGlobal: false
 };
 
-console.log("🚀 SERVIDOR LISTO - VERSIÓN FINAL APP");
+console.log("🚀 SERVIDOR LISTO - VERSIÓN FINAL APP CON FONDO AUTO");
 
 io.on('connection', (socket) => {
     // Enviar estado inicial
