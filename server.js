@@ -19,7 +19,7 @@ let estadoJuego = {
     vistaActual: 'pulsador', // 'pulsador', 'espera', 'web', 'precio'
     urlActual: '',
     urlsGuardadas: ['', '', ''],
-    escenas: { espera: '' },
+    escenas: { espera: 'espera.jpg' },
     pulsadorActivo: false,
     colaPulsador: [],
     bloqueoGlobal: false,
