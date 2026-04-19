@@ -215,13 +215,33 @@
                 <button class="mini-btn btn-outline" onclick="guardarConfigEscenas()">💾 Guardar</button>
             </div>
             
-            <div style="display:flex; gap:5px; margin-bottom:10px">
-                <button onclick="setEscena('pulsador')" class="btn-primary">🔴 PULSADOR</button>
-                <button onclick="setEscena('espera')" class="btn-outline">🖼️ ESPERA</button>
+            <div style="display:flex; gap:5px; margin-bottom:10px; flex-wrap:wrap">
+                <button onclick="setEscena('pulsador')" class="btn-primary" style="flex:1; min-width:0">🔴 PULSADOR</button>
+                <button onclick="setEscena('espera')" class="btn-outline" style="flex:1; min-width:0">🖼️ ESPERA</button>
+                <button onclick="setEscena('precio')" class="btn-outline" style="flex:1; min-width:0">💰 PRECIO JUSTO</button>
             </div>
 
             <h4 style="margin:5px 0">Lanzar Web/Video</h4>
             <div id="url-slots"></div>
+
+            <h4 style="margin:15px 0 5px 0">💰 Precio Justo</h4>
+            <div class="scene-config">
+                <div style="display:flex; gap:5px; margin-bottom:5px">
+                    <input type="number" id="precio-cifra" placeholder="Cifra a adivinar" style="flex:2; background:#222; color:#fff; border:1px solid #444">
+                    <button class="mini-btn btn-outline" onclick="precioSetCifra()" style="width:auto; flex:0 0 auto">💾</button>
+                </div>
+                <div style="display:flex; gap:5px; margin-bottom:5px">
+                    <input type="number" id="precio-tiempo" placeholder="Tiempo (seg)" value="30" min="5" style="flex:2; background:#222; color:#fff; border:1px solid #444">
+                    <button class="mini-btn btn-outline" onclick="precioSetTiempo()" style="width:auto; flex:0 0 auto">💾</button>
+                </div>
+                <div style="display:flex; gap:5px; margin-bottom:5px">
+                    <button class="mini-btn btn-danger" onclick="precioNuevaPartida()">🔄 Nueva</button>
+                    <button class="mini-btn btn-success" onclick="precioIniciar()">▶️ Comenzar</button>
+                    <button class="mini-btn btn-primary" onclick="precioForzarResultado()">⏭️ Resultado</button>
+                </div>
+                <div id="precio-status" style="margin-top:8px; font-size:13px; color:#aaa"></div>
+                <div id="precio-respuestas-admin" style="margin-top:8px"></div>
+            </div>
 
             <h4 style="margin:15px 0 5px 0">Gestión Equipos</h4>
             <div id="admin-equipos-list"></div>
@@ -247,6 +267,19 @@
             <div id="pulsador-btn" onclick="pulsar()" style="display:none">ESPERA...</div>
             <iframe id="frame-player" src="" style="display:none"></iframe>
             <img id="img-espera" src="" alt="Espera">
+            <div id="precio-player" style="display:none; width:100%; height:100%; flex-direction:column; padding:30px; box-sizing:border-box; align-items:center; justify-content:flex-start; overflow-y:auto;">
+                <div id="precio-timer" style="font-size:80px; color:var(--gold); font-weight:900; margin-bottom:20px; text-shadow:0 0 30px var(--gold); line-height:1">--</div>
+                <div id="precio-input-wrap" style="display:flex; gap:10px; width:100%; max-width:500px; margin-bottom:10px">
+                    <input type="number" id="precio-respuesta" placeholder="Tu respuesta" style="font-size:28px; text-align:center; padding:15px; color:#fff; background:#222; border:2px solid #444; flex:1">
+                    <button id="precio-enviar-btn" onclick="precioEnviarRespuesta()" class="btn-success" style="font-size:22px; padding:15px 30px; width:auto; flex:0 0 auto">Enviar</button>
+                </div>
+                <div id="precio-estado-envio" style="margin-top:10px; font-size:18px; color:var(--accent); min-height:26px; font-weight:bold"></div>
+                <div id="precio-resultado-box" style="display:none; width:100%; max-width:600px; margin-top:20px; text-align:center">
+                    <h2 id="precio-resultado-titulo" style="font-size:44px; margin:0 0 10px 0"></h2>
+                    <p style="font-size:22px; margin:10px 0">Cifra correcta: <strong id="precio-cifra-correcta" style="color:var(--gold); font-size:28px"></strong></p>
+                    <div id="precio-ranking" style="margin-top:20px"></div>
+                </div>
+            </div>
         </div>
 
         <div id="blocked-layer" class="blocked-overlay">
@@ -330,6 +363,162 @@
             if(nuevo && nuevo.trim() !== "") socket.emit('admin_rename_team', { id: id, nuevoNombre: nuevo.trim() });
         }
 
+        // --- PRECIO JUSTO ---
+        let precioTickerHandle = null;
+        let precioCifraAdmin = null; // cifra correcta conocida sólo en la sesión admin
+
+        function precioSetCifra() {
+            const v = document.getElementById('precio-cifra').value;
+            if (v === '' || isNaN(Number(v))) { mostrarNotif("Introduce una cifra válida", "⚠️"); return; }
+            socket.emit('admin_precio_set_cifra', v);
+            mostrarNotif("Cifra guardada", "💾");
+        }
+        function precioSetTiempo() {
+            const v = document.getElementById('precio-tiempo').value;
+            if (v === '' || isNaN(Number(v)) || Number(v) < 5) { mostrarNotif("Mínimo 5 segundos", "⚠️"); return; }
+            socket.emit('admin_precio_set_tiempo', v);
+            mostrarNotif("Tiempo guardado", "💾");
+        }
+        function precioNuevaPartida() {
+            if (!confirm("¿Nueva partida? Se borran las respuestas y la cifra actual.")) return;
+            socket.emit('admin_precio_nueva_partida');
+            precioCifraAdmin = null;
+            document.getElementById('precio-cifra').value = '';
+        }
+        function precioIniciar() { socket.emit('admin_precio_iniciar'); }
+        function precioForzarResultado() { socket.emit('admin_precio_forzar_resultado'); }
+        function precioEnviarRespuesta() {
+            const v = document.getElementById('precio-respuesta').value;
+            if (v === '' || isNaN(Number(v))) { mostrarNotif("Introduce un número", "⚠️"); return; }
+            socket.emit('precio_enviar_respuesta', { valor: Number(v) });
+        }
+
+        function precioIniciarTicker() {
+            if (precioTickerHandle) return;
+            precioTickerHandle = setInterval(precioActualizarTimer, 200);
+            precioActualizarTimer();
+        }
+        function precioDetenerTicker() {
+            if (precioTickerHandle) { clearInterval(precioTickerHandle); precioTickerHandle = null; }
+        }
+        function precioActualizarTimer() {
+            const p = estadoActual && estadoActual.precio;
+            const el = document.getElementById('precio-timer');
+            if (!el || !p) return;
+            if (p.fase !== 'jugando' || !p.tiempoInicio) {
+                el.textContent = p.fase === 'resultado' ? '0' : (p.tiempoSegundos || '--');
+                return;
+            }
+            const restante = Math.max(0, p.tiempoSegundos - (Date.now() - p.tiempoInicio) / 1000);
+            el.textContent = restante.toFixed(1);
+        }
+
+        function precioActualizarVistaJugador() {
+            const p = estadoActual && estadoActual.precio;
+            if (!p) return;
+            const inputWrap = document.getElementById('precio-input-wrap');
+            const estadoEnvio = document.getElementById('precio-estado-envio');
+            const resultadoBox = document.getElementById('precio-resultado-box');
+            const input = document.getElementById('precio-respuesta');
+            const btn = document.getElementById('precio-enviar-btn');
+            const miRespuesta = misDatos ? p.respuestas[misDatos.id] : null;
+
+            if (p.fase === 'jugando') {
+                precioIniciarTicker();
+                resultadoBox.style.display = 'none';
+                inputWrap.style.display = 'flex';
+                if (miRespuesta) {
+                    input.disabled = true; btn.disabled = true;
+                    input.value = miRespuesta.valor;
+                    estadoEnvio.textContent = '✅ Respuesta enviada: ' + miRespuesta.valor;
+                } else {
+                    input.disabled = false; btn.disabled = false;
+                    estadoEnvio.textContent = '';
+                }
+            } else if (p.fase === 'resultado') {
+                precioDetenerTicker();
+                precioActualizarTimer();
+                inputWrap.style.display = 'none';
+                estadoEnvio.textContent = '';
+                precioPintarResultadoJugador();
+            } else { // config
+                precioDetenerTicker();
+                precioActualizarTimer();
+                resultadoBox.style.display = 'none';
+                inputWrap.style.display = 'flex';
+                input.disabled = true; btn.disabled = true;
+                input.value = '';
+                estadoEnvio.textContent = 'Esperando al administrador...';
+            }
+        }
+
+        function precioPintarResultadoJugador() {
+            const p = estadoActual && estadoActual.precio;
+            if (!p) return;
+            const cifra = p.cifraCorrecta;
+            const box = document.getElementById('precio-resultado-box');
+            const titulo = document.getElementById('precio-resultado-titulo');
+            const cifraEl = document.getElementById('precio-cifra-correcta');
+            const ranking = document.getElementById('precio-ranking');
+
+            if (misDatos) {
+                if (p.ganadorId === misDatos.id) { titulo.textContent = "🏆 ¡HAS GANADO!"; titulo.style.color = "var(--gold)"; }
+                else { titulo.textContent = "¡NO HAS GANADO!"; titulo.style.color = "var(--danger)"; }
+            }
+            cifraEl.textContent = (cifra !== null && typeof cifra !== 'undefined') ? cifra : '—';
+
+            const entries = Object.entries(p.respuestas).map(([id, r]) => {
+                const eq = equiposCache.find(e => e.id === id);
+                const pasado = (cifra !== null) && r.valor > cifra;
+                return { id, nombre: eq ? eq.nombre : id, valor: r.valor, tiempo: r.tiempo, pasado };
+            });
+            entries.sort((a, b) => {
+                if (a.pasado !== b.pasado) return a.pasado ? 1 : -1;
+                if (!a.pasado) { if (b.valor !== a.valor) return b.valor - a.valor; return a.tiempo - b.tiempo; }
+                return a.valor - b.valor;
+            });
+            ranking.innerHTML = entries.map(e => {
+                const esGanador = e.id === p.ganadorId;
+                const color = esGanador ? 'var(--gold)' : (e.pasado ? 'var(--danger)' : 'var(--text)');
+                const icon = esGanador ? '🏆 ' : (e.pasado ? '💥 ' : '· ');
+                return `<div style="display:flex; justify-content:space-between; padding:10px 14px; background:#222; border-radius:6px; margin-bottom:6px; color:${color}; font-size:18px; border-left:4px solid ${color}"><span>${icon}${e.nombre}</span><span style="font-weight:bold">${e.valor}${e.pasado ? ' (se pasó)' : ''}</span></div>`;
+            }).join('') || '<div style="color:#aaa">Sin respuestas</div>';
+            box.style.display = 'block';
+        }
+
+        function renderPrecioAdmin() {
+            const p = estadoActual && estadoActual.precio;
+            const statusEl = document.getElementById('precio-status');
+            const respEl = document.getElementById('precio-respuestas-admin');
+            if (!p || !statusEl || !respEl) return;
+
+            const n = Object.keys(p.respuestas).length;
+            const total = equiposCache.length;
+            let txt = '';
+            if (p.fase === 'config') txt = `⚪ Config · ${p.tiempoSegundos}s · ${n}/${total} respuestas`;
+            else if (p.fase === 'jugando') txt = `🟢 Jugando · ${p.tiempoSegundos}s · ${n}/${total} respuestas`;
+            else if (p.fase === 'resultado') {
+                const ganador = p.ganadorId ? (equiposCache.find(e=>e.id===p.ganadorId)||{}).nombre || p.ganadorId : '—';
+                txt = `🏁 Resultado · ganador: ${ganador}`;
+            }
+            statusEl.textContent = txt;
+
+            if (total === 0) { respEl.innerHTML = ''; return; }
+            const cifra = (p.cifraCorrecta !== null && typeof p.cifraCorrecta !== 'undefined') ? p.cifraCorrecta : precioCifraAdmin;
+            respEl.innerHTML = equiposCache.map(eq => {
+                const r = p.respuestas[eq.id];
+                if (!r) return `<div style="padding:4px 8px; color:#888; font-size:13px">· ${eq.nombre}: —</div>`;
+                let color = 'var(--text)';
+                let extra = '';
+                if (cifra !== null && typeof cifra !== 'undefined') {
+                    if (r.valor > cifra) { color = 'var(--danger)'; extra = ' 💥'; }
+                    else if (r.valor === cifra) { color = 'var(--gold)'; extra = ' 🎯'; }
+                }
+                if (eq.id === p.ganadorId) { color = 'var(--gold)'; extra = ' 🏆'; }
+                return `<div style="padding:4px 8px; color:${color}; font-size:13px; font-weight:bold">· ${eq.nombre}: ${r.valor}${extra}</div>`;
+            }).join('');
+        }
+
         // --- JUGADOR ---
         function irAJugador() {
             // Intentar Pantalla Completa
@@ -376,11 +565,26 @@
 
         socket.on('admin_auth_success', (d) => {
             equiposCache = d.equipos;
+            estadoActual = d.estadoJuego;
             renderUrlSlots(d.estadoJuego.urlsGuardadas);
             if(d.estadoJuego.escenas) document.getElementById('cfg-espera').value = d.estadoJuego.escenas.espera || '';
+            precioCifraAdmin = (typeof d.precioCifra !== 'undefined') ? d.precioCifra : null;
+            if (precioCifraAdmin !== null) document.getElementById('precio-cifra').value = precioCifraAdmin;
+            if (d.estadoJuego.precio) document.getElementById('precio-tiempo').value = d.estadoJuego.precio.tiempoSegundos;
             if(d.juegoIniciado) { renderAdminPanel(d.equipos); showView('view-admin-panel'); }
             else showView('view-admin-setup');
             iniciarKeepaliveAdmin();
+            renderPrecioAdmin();
+        });
+        socket.on('admin_precio_cifra_sync', (cifra) => {
+            precioCifraAdmin = cifra;
+            const el = document.getElementById('precio-cifra');
+            if (el) el.value = (cifra !== null && typeof cifra !== 'undefined') ? cifra : '';
+        });
+        socket.on('precio_resultado', () => {
+            // La mayor parte del trabajo ya la hace 'sync_estado' al cambiar fase a 'resultado'; este evento es un hook explícito.
+            if (misDatos && document.getElementById('view-player').classList.contains('active')) precioActualizarVistaJugador();
+            if (document.getElementById('view-admin-panel').classList.contains('active')) renderPrecioAdmin();
         });
 
         socket.on('juego_iniciado_teams', (equipos) => {
@@ -395,7 +599,7 @@
 
         socket.on('actualizar_admin_equipos', (eqs) => {
             equiposCache = eqs;
-            if(document.getElementById('view-admin-panel').classList.contains('active')) renderAdminPanel(eqs);
+            if(document.getElementById('view-admin-panel').classList.contains('active')) { renderAdminPanel(eqs); renderPrecioAdmin(); }
             if(document.getElementById('view-player-select').classList.contains('active')) renderListaSeleccion(eqs);
         });
 
@@ -485,6 +689,9 @@
                 colaDiv.innerHTML = estadoActual.pulsadorActivo ? `<span style="color:var(--success)">🟢 ABIERTO</span>` : `<span style="color:gray">🔴 CERRADO</span>`;
             }
 
+            // Admin: estado del Precio Justo (siempre visible en el panel)
+            renderPrecioAdmin();
+
             // JUGADOR
             if(misDatos) {
                 document.getElementById('mi-equipo-nombre').innerText = misDatos.nombre;
@@ -494,6 +701,7 @@
                 const imgEspera = document.getElementById('img-espera');
                 const bonosDiv = document.getElementById('player-bonos');
                 const overlay = document.getElementById('blocked-layer');
+                const precioPlayer = document.getElementById('precio-player');
 
                 // VISTAS
                 if (estadoActual.vistaActual === 'espera') {
@@ -501,11 +709,23 @@
                     imgEspera.style.display = 'block';
                     pulsador.style.display = 'none';
                     iframe.style.display = 'none';
+                    precioPlayer.style.display = 'none';
+                    precioDetenerTicker();
                     if(estadoActual.escenas.espera) imgEspera.src = estadoActual.escenas.espera;
-                } 
+                }
+                else if (estadoActual.vistaActual === 'precio') {
+                    bonosDiv.style.display = 'none';
+                    imgEspera.style.display = 'none';
+                    pulsador.style.display = 'none';
+                    iframe.style.display = 'none';
+                    precioPlayer.style.display = 'flex';
+                    precioActualizarVistaJugador();
+                }
                 else {
                     bonosDiv.style.display = 'flex';
                     imgEspera.style.display = 'none';
+                    precioPlayer.style.display = 'none';
+                    precioDetenerTicker();
 
                     if (estadoActual.vistaActual === 'pulsador') {
                         pulsador.style.display = 'flex';
