@@ -16,20 +16,56 @@ let equipos = [];
 // Modelo equipo: { id, nombre, ocupado, bonos: [], bloqueado: false, socketId }
 
 let estadoJuego = {
-    vistaActual: 'pulsador', // 'pulsador', 'espera', 'web'
-    urlActual: '', 
-    urlsGuardadas: ['', '', ''], 
+    vistaActual: 'pulsador', // 'pulsador', 'espera', 'web', 'precio'
+    urlActual: '',
+    urlsGuardadas: ['', '', ''],
     escenas: { espera: '' },
     pulsadorActivo: false,
     colaPulsador: [],
-    bloqueoGlobal: false
+    bloqueoGlobal: false,
+    precio: {
+        tiempoSegundos: 30,
+        tiempoInicio: null,      // Date.now() cuando arranca la cuenta atrás
+        respuestas: {},           // { equipoId: { valor, tiempo } }
+        fase: 'config',           // 'config' | 'jugando' | 'resultado'
+        ganadorId: null,
+        cifraCorrecta: null       // expuesta a todos SOLO en fase 'resultado'
+    }
 };
+
+// Cifra correcta del Precio Justo: nunca viaja dentro de estadoJuego para que no llegue a los jugadores mientras juegan.
+let precioCifraCorrecta = null;
+let precioTimeoutHandle = null;
 
 console.log("🚀 SERVIDOR LISTO - VERSIÓN FINAL APP");
 
 // --- HEALTH-CHECK ---
 // Endpoint usado por el keepalive del panel admin: Render duerme el servicio sin tráfico HTTP y los WebSocket no cuentan.
 app.get('/ping', (req, res) => res.send('ok'));
+
+// Cierra la ronda actual de Precio Justo: calcula ganador y emite resultado a todos.
+function finalizarPrecio() {
+    if (precioTimeoutHandle) { clearTimeout(precioTimeoutHandle); precioTimeoutHandle = null; }
+    estadoJuego.precio.fase = 'resultado';
+    estadoJuego.precio.cifraCorrecta = precioCifraCorrecta;
+
+    const cifra = precioCifraCorrecta;
+    // Se descarta a quien se pasa. Gana el más alto por debajo (o exacto); desempate por timestamp más temprano.
+    const ordenados = Object.entries(estadoJuego.precio.respuestas)
+        .filter(([, r]) => r.valor <= cifra)
+        .sort((a, b) => {
+            if (b[1].valor !== a[1].valor) return b[1].valor - a[1].valor;
+            return a[1].tiempo - b[1].tiempo;
+        });
+    estadoJuego.precio.ganadorId = ordenados.length > 0 ? ordenados[0][0] : null;
+
+    io.emit('precio_resultado', {
+        cifraCorrecta: cifra,
+        respuestas: estadoJuego.precio.respuestas,
+        ganadorId: estadoJuego.precio.ganadorId
+    });
+    io.emit('sync_estado', estadoJuego);
+}
 
 io.on('connection', (socket) => {
     // Enviar estado inicial
@@ -38,7 +74,7 @@ io.on('connection', (socket) => {
     // --- ZONA ADMIN ---
     socket.on('login_admin', (pin) => {
         if (String(pin).trim() === ADMIN_PIN) {
-            socket.emit('admin_auth_success', { equipos, estadoJuego, juegoIniciado });
+            socket.emit('admin_auth_success', { equipos, estadoJuego, juegoIniciado, precioCifra: precioCifraCorrecta });
         } else {
             socket.emit('admin_auth_fail');
         }
@@ -121,8 +157,66 @@ io.on('connection', (socket) => {
     });
 
     socket.on('admin_reset_total', () => {
+        if (precioTimeoutHandle) { clearTimeout(precioTimeoutHandle); precioTimeoutHandle = null; }
         juegoIniciado = false; equipos = []; estadoJuego.colaPulsador = [];
+        estadoJuego.precio = { tiempoSegundos: 30, tiempoInicio: null, respuestas: {}, fase: 'config', ganadorId: null, cifraCorrecta: null };
+        precioCifraCorrecta = null;
         io.emit('reset_total_client');
+    });
+
+    // --- PRECIO JUSTO ---
+    socket.on('admin_precio_set_cifra', (valor) => {
+        const n = Number(valor);
+        if (!isFinite(n)) return;
+        precioCifraCorrecta = n;
+        socket.emit('admin_precio_cifra_sync', precioCifraCorrecta);
+    });
+
+    socket.on('admin_precio_set_tiempo', (segundos) => {
+        const n = Number(segundos);
+        if (!isFinite(n) || n < 5) return;
+        estadoJuego.precio.tiempoSegundos = Math.round(n);
+        io.emit('sync_estado', estadoJuego);
+    });
+
+    socket.on('admin_precio_nueva_partida', () => {
+        if (precioTimeoutHandle) { clearTimeout(precioTimeoutHandle); precioTimeoutHandle = null; }
+        estadoJuego.precio.respuestas = {};
+        estadoJuego.precio.tiempoInicio = null;
+        estadoJuego.precio.fase = 'config';
+        estadoJuego.precio.ganadorId = null;
+        estadoJuego.precio.cifraCorrecta = null;
+        io.emit('sync_estado', estadoJuego);
+    });
+
+    socket.on('admin_precio_iniciar', () => {
+        if (precioCifraCorrecta === null) {
+            socket.emit('notificacion_bono', { msg: "❌ Define una cifra antes de comenzar" });
+            return;
+        }
+        if (precioTimeoutHandle) { clearTimeout(precioTimeoutHandle); precioTimeoutHandle = null; }
+        estadoJuego.precio.respuestas = {};
+        estadoJuego.precio.tiempoInicio = Date.now();
+        estadoJuego.precio.fase = 'jugando';
+        estadoJuego.precio.ganadorId = null;
+        estadoJuego.precio.cifraCorrecta = null;
+        precioTimeoutHandle = setTimeout(finalizarPrecio, estadoJuego.precio.tiempoSegundos * 1000);
+        io.emit('sync_estado', estadoJuego);
+    });
+
+    socket.on('admin_precio_forzar_resultado', () => {
+        if (estadoJuego.precio.fase === 'jugando') finalizarPrecio();
+    });
+
+    socket.on('precio_enviar_respuesta', (data) => {
+        if (estadoJuego.precio.fase !== 'jugando') return;
+        const eq = equipos.find(e => e.id === socket.equipoId);
+        if (!eq) return;
+        const valor = Number(data && data.valor);
+        if (!isFinite(valor)) return;
+        if (estadoJuego.precio.respuestas[eq.id]) return; // una respuesta por ronda
+        estadoJuego.precio.respuestas[eq.id] = { valor, tiempo: Date.now() };
+        io.emit('sync_estado', estadoJuego);
     });
 
     // --- ZONA JUGADORES ---
