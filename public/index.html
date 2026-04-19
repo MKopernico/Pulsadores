@@ -38,7 +38,13 @@
         h1 { color: var(--accent); margin-bottom: 30px; text-transform: uppercase; letter-spacing: 2px; }
 
         /* --- ADMIN --- */
-        .admin-panel { text-align: left; } 
+        .admin-panel { text-align: left; }
+        #admin-mode-bar { position: sticky; top: 0; z-index: 30; background: var(--bg); padding: 10px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; border-bottom: 2px solid var(--header-bg); box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+        .mode-btn { padding: 12px 4px; font-size: 12px; font-weight: bold; background: #2a2a2a; color: #888; border: 2px solid #333; border-radius: 10px; text-transform: uppercase; cursor: pointer; line-height: 1.3; transition: all 0.15s; width: 100%; box-sizing: border-box; }
+        .mode-btn:hover { border-color: #555; }
+        .mode-btn.active { background: var(--accent); color: #000; border-color: var(--accent); box-shadow: 0 0 15px rgba(0, 212, 255, 0.5); }
+        .section-title { margin: 20px 0 8px 0; color: var(--accent); font-size: 15px; border-bottom: 1px solid #333; padding-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; }
+        .section-block { background: #222; padding: 12px; border-radius: 10px; margin-bottom: 10px; border: 1px solid #333; }
         .team-row { background: #333; padding: 10px; margin-bottom: 10px; border-radius: 8px; display: flex; flex-direction: column; gap: 5px; border-left: 4px solid #555; }
         .team-row.is-locked { border-left-color: var(--danger); background: #2a1a1a; }
         .team-header { display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
@@ -189,62 +195,69 @@
     </div>
 
     <div id="view-admin-panel" class="screen admin-panel">
-        <div class="container-center">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
-                <div style="display:flex; align-items:center; gap:10px">
-                    <h3 style="margin:0">Panel de Control</h3>
+        <div class="container-center" style="padding:0">
+            <!-- Barra fija de modo (mezclador de vídeo): siempre visible, ilumina el modo activo -->
+            <div id="admin-mode-bar">
+                <button id="mode-btn-espera" onclick="setEscena('espera')" class="mode-btn">🖼️<br>ESPERA</button>
+                <button id="mode-btn-pulsador" onclick="setEscena('pulsador')" class="mode-btn">🔴<br>PULSADOR</button>
+                <button id="mode-btn-precio" onclick="setEscena('precio')" class="mode-btn">💰<br>PRECIO</button>
+                <button id="mode-btn-web" onclick="setEscenaWeb()" class="mode-btn">🌐<br>WEB</button>
+            </div>
+
+            <div style="padding:15px">
+                <div style="text-align:right; min-height:14px; margin-bottom:6px">
                     <span id="keepalive-indicator" style="display:none; font-size:11px; color:var(--success);">🟢 keepalive</span>
                 </div>
-                <button onclick="resetTotal()" class="btn-danger" style="width:auto; font-size:12px">⚠️ Reset</button>
-            </div>
-            
-            <div style="background:#222; padding:10px; border-radius:10px; margin-bottom:15px;">
-                <div style="display:flex; gap:5px;">
-                    <button onclick="ctrlPulsador('abrir')" class="btn-success">ABRIR</button>
-                    <button onclick="ctrlPulsador('pausar')" class="btn-outline">PAUSAR</button>
-                    <button onclick="ctrlPulsador('reset')" class="btn-danger">RESET</button>
-                </div>
-                <button id="btn-global-lock" onclick="toggleGlobalLock()" class="btn-outline" style="margin-top:5px">🔓 Bloqueo Global: OFF</button>
-                <div id="admin-cola" style="margin-top:10px; color:var(--accent); font-weight:bold; min-height:20px; font-size:18px;"></div>
-            </div>
 
-            <h4 style="margin:15px 0 5px 0">📺 Escenas</h4>
-            <div class="scene-config">
-                <label>Fondo Espera (URL o ./fondo.jpg):</label>
-                <input type="text" id="cfg-espera" placeholder="Ej: ./logo.jpg">
-                <button class="mini-btn btn-outline" onclick="guardarConfigEscenas()">💾 Guardar</button>
-            </div>
-            
-            <div style="display:flex; gap:5px; margin-bottom:10px; flex-wrap:wrap">
-                <button onclick="setEscena('pulsador')" class="btn-primary" style="flex:1; min-width:0">🔴 PULSADOR</button>
-                <button onclick="setEscena('espera')" class="btn-outline" style="flex:1; min-width:0">🖼️ ESPERA</button>
-                <button onclick="setEscena('precio')" class="btn-outline" style="flex:1; min-width:0">💰 PRECIO JUSTO</button>
-            </div>
-
-            <h4 style="margin:5px 0">Lanzar Web/Video</h4>
-            <div id="url-slots"></div>
-
-            <h4 style="margin:15px 0 5px 0">💰 Precio Justo</h4>
-            <div class="scene-config">
-                <div style="display:flex; gap:5px; margin-bottom:5px">
-                    <input type="number" id="precio-cifra" placeholder="Cifra a adivinar" style="flex:2; background:#222; color:#fff; border:1px solid #444">
-                    <button class="mini-btn btn-outline" onclick="precioSetCifra()" style="width:auto; flex:0 0 auto">💾</button>
+                <h4 class="section-title">🔴 Pulsador</h4>
+                <div class="section-block">
+                    <div style="display:flex; gap:5px;">
+                        <button onclick="ctrlPulsador('abrir')" class="btn-success">ABRIR</button>
+                        <button onclick="ctrlPulsador('pausar')" class="btn-outline">PAUSAR</button>
+                        <button onclick="ctrlPulsador('reset')" class="btn-danger">RESET</button>
+                    </div>
+                    <button id="btn-global-lock" onclick="toggleGlobalLock()" class="btn-outline" style="margin-top:5px">🔓 Bloqueo Global: OFF</button>
+                    <div id="admin-cola" style="margin-top:10px; color:var(--accent); font-weight:bold; min-height:20px; font-size:18px;"></div>
                 </div>
-                <div style="display:flex; gap:5px; margin-bottom:5px">
-                    <input type="number" id="precio-tiempo" placeholder="Tiempo (seg)" value="30" min="5" style="flex:2; background:#222; color:#fff; border:1px solid #444">
-                    <button class="mini-btn btn-outline" onclick="precioSetTiempo()" style="width:auto; flex:0 0 auto">💾</button>
-                </div>
-                <div style="display:flex; gap:5px; margin-bottom:5px">
-                    <button class="mini-btn btn-danger" onclick="precioNuevaPartida()">🔄 Nueva</button>
-                    <button class="mini-btn btn-success" onclick="precioIniciar()">▶️ Comenzar</button>
-                    <button class="mini-btn btn-primary" onclick="precioForzarResultado()">⏭️ Resultado</button>
-                </div>
-                <div id="precio-status" style="margin-top:8px; font-size:13px; color:#aaa"></div>
-                <div id="precio-respuestas-admin" style="margin-top:8px"></div>
-            </div>
 
-            <h4 style="margin:15px 0 5px 0">Gestión Equipos</h4>
-            <div id="admin-equipos-list"></div>
+                <h4 class="section-title">💰 Precio Justo</h4>
+                <div class="section-block">
+                    <div style="display:flex; gap:5px; margin-bottom:5px">
+                        <input type="number" id="precio-cifra" placeholder="Cifra a adivinar" style="flex:2; background:#1a1a1a; color:#fff; border:1px solid #444">
+                        <button class="mini-btn btn-outline" onclick="precioSetCifra()" style="width:auto; flex:0 0 auto">💾</button>
+                    </div>
+                    <div style="display:flex; gap:5px; margin-bottom:5px">
+                        <input type="number" id="precio-tiempo" placeholder="Tiempo (seg)" value="30" min="5" style="flex:2; background:#1a1a1a; color:#fff; border:1px solid #444">
+                        <button class="mini-btn btn-outline" onclick="precioSetTiempo()" style="width:auto; flex:0 0 auto">💾</button>
+                    </div>
+                    <div style="display:flex; gap:5px; margin-bottom:5px">
+                        <button class="mini-btn btn-danger" onclick="precioNuevaPartida()">🔄 Nueva</button>
+                        <button class="mini-btn btn-success" onclick="precioIniciar()">▶️ Comenzar</button>
+                        <button class="mini-btn btn-primary" onclick="precioForzarResultado()">⏭️ Resultado</button>
+                    </div>
+                    <div id="precio-status" style="margin-top:8px; font-size:13px; color:#aaa"></div>
+                    <div id="precio-respuestas-admin" style="margin-top:8px"></div>
+                </div>
+
+                <h4 class="section-title">🌐 Web / Video</h4>
+                <div class="section-block">
+                    <div id="url-slots"></div>
+                </div>
+
+                <h4 class="section-title">🖼️ Imagen de Espera</h4>
+                <div class="section-block">
+                    <label style="font-size:13px; color:#aaa">Archivo o URL (por defecto: espera.jpg):</label>
+                    <input type="text" id="cfg-espera" placeholder="espera.jpg" style="background:#1a1a1a; color:#fff; border:1px solid #444">
+                    <button class="mini-btn btn-outline" onclick="guardarConfigEscenas()" style="width:auto; margin-top:5px">💾 Guardar</button>
+                </div>
+
+                <h4 class="section-title">👥 Equipos</h4>
+                <div id="admin-equipos-list"></div>
+
+                <div style="margin:30px 0 15px 0; text-align:center">
+                    <button onclick="resetTotal()" class="btn-danger" style="width:auto; font-size:13px; padding:8px 20px">⚠️ Reset Total</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -266,7 +279,7 @@
         <div id="player-main-stage">
             <div id="pulsador-btn" onclick="pulsar()" style="display:none">ESPERA...</div>
             <iframe id="frame-player" src="" style="display:none"></iframe>
-            <img id="img-espera" src="" alt="Espera">
+            <img id="img-espera" src="espera.jpg" alt="Espera">
             <div id="precio-player" style="display:none; width:100%; height:100%; flex-direction:column; padding:30px; box-sizing:border-box; align-items:center; justify-content:flex-start; overflow-y:auto;">
                 <div id="precio-timer" style="font-size:80px; color:var(--gold); font-weight:900; margin-bottom:20px; text-shadow:0 0 30px var(--gold); line-height:1">--</div>
                 <div id="precio-input-wrap" style="display:flex; gap:10px; width:100%; max-width:500px; margin-bottom:10px">
@@ -350,6 +363,19 @@
             if(u) socket.emit('admin_set_escena', { vista:'web', url:u });
         }
         function setEscena(v) { socket.emit('admin_set_escena', { vista:v }); }
+        function setEscenaWeb() {
+            const urls = (estadoActual && estadoActual.urlsGuardadas) || [];
+            const primera = urls.find(u => u);
+            if (primera) socket.emit('admin_set_escena', { vista: 'web', url: primera });
+            else { mostrarNotif("Sin URLs guardadas — voy a Espera", "🌐"); socket.emit('admin_set_escena', { vista: 'espera' }); }
+        }
+        function marcarModoActivo() {
+            const v = estadoActual && estadoActual.vistaActual;
+            ['espera', 'pulsador', 'precio', 'web'].forEach(m => {
+                const el = document.getElementById(`mode-btn-${m}`);
+                if (el) el.classList.toggle('active', v === m);
+            });
+        }
         function guardarConfigEscenas() {
             const esp = document.getElementById('cfg-espera').value;
             socket.emit('admin_config_escenas', { espera: esp });
@@ -410,7 +436,7 @@
                 return;
             }
             const restante = Math.max(0, p.tiempoSegundos - (Date.now() - p.tiempoInicio) / 1000);
-            el.textContent = restante.toFixed(1);
+            el.textContent = Math.ceil(restante);
         }
 
         function precioActualizarVistaJugador() {
@@ -448,7 +474,7 @@
                 inputWrap.style.display = 'flex';
                 input.disabled = true; btn.disabled = true;
                 input.value = '';
-                estadoEnvio.textContent = 'Esperando al administrador...';
+                estadoEnvio.textContent = 'Esperando cifra a adivinar...';
             }
         }
 
@@ -575,6 +601,7 @@
             else showView('view-admin-setup');
             iniciarKeepaliveAdmin();
             renderPrecioAdmin();
+            marcarModoActivo();
         });
         socket.on('admin_precio_cifra_sync', (cifra) => {
             precioCifraAdmin = cifra;
@@ -689,7 +716,8 @@
                 colaDiv.innerHTML = estadoActual.pulsadorActivo ? `<span style="color:var(--success)">🟢 ABIERTO</span>` : `<span style="color:gray">🔴 CERRADO</span>`;
             }
 
-            // Admin: estado del Precio Justo (siempre visible en el panel)
+            // Admin: modo activo en la barra superior + estado del Precio Justo (siempre visibles en el panel)
+            marcarModoActivo();
             renderPrecioAdmin();
 
             // JUGADOR
@@ -711,7 +739,7 @@
                     iframe.style.display = 'none';
                     precioPlayer.style.display = 'none';
                     precioDetenerTicker();
-                    if(estadoActual.escenas.espera) imgEspera.src = estadoActual.escenas.espera;
+                    imgEspera.src = (estadoActual.escenas && estadoActual.escenas.espera) ? estadoActual.escenas.espera : 'espera.jpg';
                 }
                 else if (estadoActual.vistaActual === 'precio') {
                     bonosDiv.style.display = 'none';
