@@ -19,14 +19,17 @@ let estadoJuego = {
     vistaActual: 'pulsador', // 'pulsador', 'espera', 'web'
     urlActual: '', 
     urlsGuardadas: ['', '', ''], 
-    // AQUÍ ESTÁ EL CAMBIO: Ya busca la foto por defecto
-    escenas: { espera: 'espera.jpg' },
+    escenas: { espera: '' },
     pulsadorActivo: false,
     colaPulsador: [],
     bloqueoGlobal: false
 };
 
-console.log("🚀 SERVIDOR LISTO - VERSIÓN FINAL APP CON FONDO AUTO");
+console.log("🚀 SERVIDOR LISTO - VERSIÓN FINAL APP");
+
+// --- HEALTH-CHECK ---
+// Endpoint usado por el keepalive del panel admin: Render duerme el servicio sin tráfico HTTP y los WebSocket no cuentan.
+app.get('/ping', (req, res) => res.send('ok'));
 
 io.on('connection', (socket) => {
     // Enviar estado inicial
@@ -53,7 +56,7 @@ io.on('connection', (socket) => {
         estadoJuego.colaPulsador = [];
         estadoJuego.bloqueoGlobal = false;
         estadoJuego.pulsadorActivo = false;
-
+        
         io.emit('juego_iniciado_teams', equipos);
         io.emit('sync_estado', estadoJuego);
     });
@@ -125,14 +128,23 @@ io.on('connection', (socket) => {
     // --- ZONA JUGADORES ---
     socket.on('join_team', (data) => {
         const equipo = equipos.find(e => e.id === data.id);
-        if (equipo) {
-            equipo.ocupado = true;
-            equipo.socketId = socket.id;
-            socket.equipoId = equipo.id; 
+        if (!equipo) return;
 
-            socket.emit('login_success', { miEquipo: equipo, estado: estadoJuego, equiposRivales: equipos });
-            io.emit('actualizar_admin_equipos', equipos);
+        // Si hay otro socket vivo dueño del equipo, rechazar. Si el anterior está muerto (reconexión tras caída), permitir takeover.
+        if (equipo.ocupado && equipo.socketId && equipo.socketId !== socket.id) {
+            const prevSocket = io.sockets.sockets.get(equipo.socketId);
+            if (prevSocket && prevSocket.connected) {
+                socket.emit('join_team_rejected', { motivo: 'ocupado', equipoId: equipo.id });
+                return;
+            }
         }
+
+        equipo.ocupado = true;
+        equipo.socketId = socket.id;
+        socket.equipoId = equipo.id;
+
+        socket.emit('login_success', { miEquipo: equipo, estado: estadoJuego, equiposRivales: equipos });
+        io.emit('actualizar_admin_equipos', equipos);
     });
 
     socket.on('pulsar_boton', () => {
@@ -163,7 +175,7 @@ io.on('connection', (socket) => {
             else if (data.tipo === 'freeze') {
                 let victima = equipos.find(e => e.id === data.targetId);
                 if(!victima && data.targetNumero) victima = equipos.find(e => e.id === `eq${data.targetNumero}`);
-
+                
                 if (victima) {
                     if(victima.id === emisor.id) {
                          socket.emit('notificacion_bono', { msg: "❌ No te puedes congelar a ti mismo" });
@@ -189,8 +201,9 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         if (socket.equipoId) {
             const equipo = equipos.find(e => e.id === socket.equipoId);
-            if (equipo) {
-                equipo.ocupado = false; 
+            // Solo liberar si este socket sigue siendo el dueño (evita pisar una toma de control ya hecha por otro socket).
+            if (equipo && equipo.socketId === socket.id) {
+                equipo.ocupado = false;
                 io.emit('actualizar_admin_equipos', equipos);
             }
         }
